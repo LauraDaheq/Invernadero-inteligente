@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invernadero Inteligente</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #d8f6d6;
+    }
+    header {
+      background-color: #5cc472;
+      padding: 1rem;
+      text-align: center;
+      color: white;
+      font-size: 1.5rem;
+    }
+    main {
+      padding: 1rem;
+    }
+    .card {
+      background-color: white;
+      padding: 1rem;
+      margin: 0.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    button {
+      background-color: #2e8b57;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 1rem auto;
+      display: block;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5rem 0;
+      border-top: 1px solid #ccc;
+    }
+    .bottom-nav div {
+      text-align: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+    .setting-input {
+      margin: 0.5rem 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .setting-input label {
+      margin-bottom: 0.2rem;
+    }
+    .setting-input input {
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <header>🌿 Invernadero Inteligente</header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="dashboard" class="active">
+      <h2>Panel Principal</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>🌡️ <span id="temp">-</span> °C</h3>
+          <p>Temperatura</p>
+        </div>
+        <div class="card">
+          <h3>💧 <span id="humAir">-</span> %</h3>
+          <p>Humedad del aire</p>
+        </div>
+        <div class="card">
+          <h3>🌱 <span id="humSoil">-</span> %</h3>
+          <p>Humedad del suelo</p>
+        </div>
+        <div class="card">
+          <h3>🚿 <span id="waterLvl">-</span> %</h3>
+          <p>Nivel de agua</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Clima -->
+    <section id="clima">
+      <h2>☁️ Información Climática</h2>
+      <p>Actualmente: Temperatura <strong><span id="tempClima">-</span>°C</strong>, Humedad: <strong><span id="humClima">-</span>%</strong></p>
+    </section>
+
+    <!-- Riego -->
+    <section id="riego">
+      <h2>💦 Control de Riego</h2>
+      <button onclick="activarRiego()">Activar Riego</button>
+      <p id="riegoStatus"></p>
+    </section>
+
+    <!-- Luces -->
+    <section id="luces">
+      <h2>💡 Control de Luces</h2>
+      <button onclick="encenderLuces()">Encender Luces</button>
+      <p id="luzStatus"></p>
+    </section>
+
+    <!-- Ajustes -->
+    <section id="ajustes">
+      <h2>⚙️ Ajustes</h2>
+      <div class="setting-input">
+        <label for="apiKey">API Key de escritura:</label>
+        <input type="text" id="apiKey" placeholder="Escribe tu Write API Key">
+      </div>
+      <div class="setting-input">
+        <label for="channelId">ID de Canal:</label>
+        <input type="number" id="channelId" placeholder="Escribe el ID del canal">
+      </div>
+      <button onclick="guardarAjustes()">Guardar</button>
+      <p id="ajusteStatus"></p>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div onclick="mostrarSeccion('dashboard')">🏠<br>Dashboard</div>
+    <div onclick="mostrarSeccion('clima')">☁️<br>Clima</div>
+    <div onclick="mostrarSeccion('riego')">💧<br>Riego</div>
+    <div onclick="mostrarSeccion('luces')">💡<br>Luces</div>
+    <div onclick="mostrarSeccion('ajustes')">⚙️<br>Ajustes</div>
+  </nav>
+
+  <script>
+    let apiKey = localStorage.getItem("apiKey") || "MQ7YSC1YB1ZEDEOW";
+    let canal = localStorage.getItem("canal") || "2993017";
+
+    function mostrarSeccion(id) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function actualizarDatos() {
+      const readAPI = `https://api.thingspeak.com/channels/${canal}/feeds/last.json`;
+      fetch(readAPI)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("temp").textContent = parseFloat(data.field1).toFixed(2);
+          document.getElementById("humAir").textContent = data.field2;
+          document.getElementById("humSoil").textContent = data.field3;
+          document.getElementById("waterLvl").textContent = data.field4;
+
+          document.getElementById("tempClima").textContent = parseFloat(data.field1).toFixed(2);
+          document.getElementById("humClima").textContent = data.field2;
+        })
+        .catch(err => console.error("Error al obtener datos:", err));
+    }
+
+    function activarRiego() {
+      if (!apiKey) return alert("Configura tu API Key en Ajustes");
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKey}&field5=1`)
+        .then(res => res.text())
+        .then(() => {
+          document.getElementById("riegoStatus").textContent = "✔️ Riego Activado";
+        })
+        .catch(() => document.getElementById("riegoStatus").textContent = "❌ Error al activar riego");
+    }
+
+    function encenderLuces() {
+      if (!apiKey) return alert("Configura tu API Key en Ajustes");
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKey}&field6=1`)
+        .then(res => res.text())
+        .then(() => {
+          document.getElementById("luzStatus").textContent = "💡 Luces Encendidas";
+        })
+        .catch(() => document.getElementById("luzStatus").textContent = "❌ Error al encender luces");
+    }
+
+    function guardarAjustes() {
+      apiKey = document.getElementById("apiKey").value;
+      canal = document.getElementById("channelId").value;
+      localStorage.setItem("apiKey", apiKey);
+      localStorage.setItem("canal", canal);
+      document.getElementById("ajusteStatus").textContent = "✅ Ajustes guardados";
+    }
+
+    actualizarDatos();
+    setInterval(actualizarDatos, 15000);
+  </script>
+
+</body>
+</html>
