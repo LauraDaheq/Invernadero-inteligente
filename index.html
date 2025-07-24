@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invernadero Inteligente</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #d8f6d6;
+    }
+    header {
+      background-color: #5cc472;
+      padding: 1rem;
+      text-align: center;
+      color: white;
+      font-size: 1.5rem;
+    }
+    main {
+      padding: 1rem;
+    }
+    .card {
+      background-color: white;
+      padding: 1rem;
+      margin: 0.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    button {
+      background-color: #2e8b57;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.5rem auto;
+      display: block;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: white;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5rem 0;
+      border-top: 1px solid #ccc;
+    }
+    .bottom-nav div {
+      text-align: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <header>🌿 Invernadero Inteligente</header>
+
+  <main>
+    <!-- Sección de Introducción -->
+    <section id="inicio" class="active">
+      <h2>📘 Introducción al Proyecto</h2>
+      <p>
+        Este proyecto nace como respuesta a la dificultad de mantener condiciones óptimas para la germinación y crecimiento de plantas aromáticas en interiores.
+        Las variaciones de temperatura, humedad y luz afectan negativamente el desarrollo de especies sensibles. 
+      </p>
+      <p>
+        La solución es un <strong>invernadero automatizado</strong> con sensores y controladores que miden variables clave y actúan en tiempo real. 
+        Además, incluye una <strong>aplicación web</strong> que permite al usuario monitorear el entorno y controlar el riego y la iluminación desde cualquier lugar.
+      </p>
+    </section>
+
+    <!-- Panel de Control -->
+    <section id="dashboard">
+      <h2>🏠 Panel de Control</h2>
+      <p>Aquí puedes visualizar las variables ambientales en tiempo real.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>🌡️ <span id="temp">-</span> °C</h3>
+          <p>Temperatura ambiente</p>
+        </div>
+        <div class="card">
+          <h3>💧 <span id="humAir">-</span> %</h3>
+          <p>Humedad del aire</p>
+        </div>
+        <div class="card">
+          <h3>🌱 <span id="humSoil">-</span> %</h3>
+          <p>Humedad del suelo</p>
+        </div>
+        <div class="card">
+          <h3>🚿 <span id="waterLvl">-</span> %</h3>
+          <p>Nivel de agua en el tanque</p>
+        </div>
+      </div>
+      <div id="alertas" style="margin-top: 1rem; color: red; font-weight: bold;"></div>
+    </section>
+
+    <!-- Riego -->
+    <section id="riego">
+      <h2>💦 Control de Riego</h2>
+      <p>Aquí puedes activar o apagar el sistema de riego manualmente.</p>
+      <button onclick="activarRiego()">Activar Riego</button>
+      <button onclick="apagarRiego()">Apagar Riego</button>
+      <p id="riegoStatus"></p>
+    </section>
+
+    <!-- Luces -->
+    <section id="luces">
+      <h2>💡 Control de Luces</h2>
+      <p>Controla las luces de cultivo para simular el fotoperiodo necesario.</p>
+      <button onclick="encenderLuces()">Encender Luces</button>
+      <button onclick="apagarLuces()">Apagar Luces</button>
+      <p id="luzStatus"></p>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div onclick="mostrarSeccion('inicio')">📘<br>Inicio</div>
+    <div onclick="mostrarSeccion('dashboard')">🏠<br>Panel</div>
+    <div onclick="mostrarSeccion('riego')">💧<br>Riego</div>
+    <div onclick="mostrarSeccion('luces')">💡<br>Luces</div>
+  </nav>
+
+  <script>
+    const apiKeyEscritura = "MQ7YSC1YB1ZEDEOW";
+    const apiKeyLectura = "IFDLL1D2OQV7OZCD";
+    const canal = "2993017";
+
+    function mostrarSeccion(id) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function actualizarDatos() {
+      const readAPI = `https://api.thingspeak.com/channels/${canal}/feeds/last.json?api_key=${apiKeyLectura}`;
+      fetch(readAPI)
+        .then(res => res.json())
+        .then(data => {
+          const temp = parseFloat(data.field1);
+          const humAir = data.field2;
+          const humSoil = data.field3;
+          const waterLvl = parseFloat(data.field4);
+
+          document.getElementById("temp").textContent = temp.toFixed(2);
+          document.getElementById("humAir").textContent = humAir;
+          document.getElementById("humSoil").textContent = humSoil;
+          document.getElementById("waterLvl").textContent = waterLvl;
+
+          // Alertas visuales + notificación emergente
+          let alertas = "";
+          if (waterLvl < 20) {
+            alertas += "⚠️ Bajo nivel de agua. ";
+            mostrarNotificacion("Nivel de agua bajo", "El tanque tiene menos del 20 % de agua.");
+          }
+          if (temp > 28) {
+            alertas += "🔥 Temperatura elevada. ";
+            mostrarNotificacion("Temperatura alta", "El ambiente supera los 35 °C.");
+          }
+          document.getElementById("alertas").textContent = alertas;
+        })
+        .catch(err => {
+          console.error("Error al obtener datos:", err);
+          document.getElementById("alertas").textContent = "❌ Error al cargar datos";
+        });
+    }
+
+    function activarRiego() {
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=1`)
+        .then(() => {
+          document.getElementById("riegoStatus").textContent = "✔️ Riego Activado";
+        })
+        .catch(() => {
+          document.getElementById("riegoStatus").textContent = "❌ Error al activar riego";
+        });
+    }
+
+    function apagarRiego() {
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=0`)
+        .then(() => {
+          document.getElementById("riegoStatus").textContent = "💧 Riego Apagado";
+        })
+        .catch(() => {
+          document.getElementById("riegoStatus").textContent = "❌ Error al apagar riego";
+        });
+    }
+
+    function encenderLuces() {
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=1`)
+        .then(() => {
+          document.getElementById("luzStatus").textContent = "💡 Luces Encendidas";
+        })
+        .catch(() => {
+          document.getElementById("luzStatus").textContent = "❌ Error al encender luces";
+        });
+    }
+
+    function apagarLuces() {
+      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=0`)
+        .then(() => {
+          document.getElementById("luzStatus").textContent = "🔌 Luces Apagadas";
+        })
+        .catch(() => {
+          document.getElementById("luzStatus").textContent = "❌ Error al apagar luces";
+        });
+    }
+
+    function mostrarNotificacion(titulo, mensaje) {
+      if (Notification.permission === "granted") {
+        new Notification(titulo, { body: mensaje });
+      }
+    }
+
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    actualizarDatos();
+    setInterval(actualizarDatos, 15000);
+  </script>
+
+</body>
+</html>
