@@ -199,10 +199,10 @@
     fetch(readAPI)
       .then(res => res.json())
       .then(data => {
-        const temp = parseFloat(data.field1);
+        const temp = data.field1;
         const humAir = data.field2;
         const humSoil = data.field3;
-        const waterLvl = parseFloat(data.field4);
+        const waterLvl = data.field4;
         const riego = data.field5;
         const luces = data.field6;
 
