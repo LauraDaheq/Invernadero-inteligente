@@ -73,23 +73,21 @@
   <header>🌿 Invernadero Inteligente</header>
 
   <main>
-    <!-- Sección de Introducción -->
     <section id="inicio" class="active">
-      <h2>📘 Introducción al Proyecto</h2>
+      <h2>📘 Proyecto</h2>
       <p>
-        Este proyecto nace como respuesta a la dificultad de mantener condiciones óptimas para la germinación y crecimiento de plantas aromáticas en interiores.
-        Las variaciones de temperatura, humedad y luz afectan negativamente el desarrollo de especies sensibles. 
+        Este proyecto nace como respuesta a la dificultad de mantener condiciones 
+        óptimas para la germinación y crecimiento de plantas aromáticas en interiores.
       </p>
       <p>
-        La solución es un <strong>invernadero automatizado</strong> con sensores y controladores que miden variables clave y actúan en tiempo real. 
-        Además, incluye una <strong>aplicación web</strong> que permite al usuario monitorear el entorno y controlar el riego y la iluminación desde cualquier lugar.
+        Se trata de un <strong>invernadero automatizado</strong> con sensores, actuadores 
+        y una <strong>aplicación web</strong> que permite monitorear y controlar las variables ambientales en tiempo real.
       </p>
     </section>
 
-    <!-- Panel de Control -->
     <section id="dashboard">
       <h2>🏠 Panel de Control</h2>
-      <p>Aquí puedes visualizar las variables ambientales en tiempo real.</p>
+      <p>Visualiza las variables ambientales en tiempo real.</p>
       <div class="grid">
         <div class="card">
           <h3>🌡️ <span id="temp">-</span> °C</h3>
@@ -105,25 +103,67 @@
         </div>
         <div class="card">
           <h3>🚿 <span id="waterLvl">-</span> %</h3>
-          <p>Nivel de agua en el tanque</p>
+          <p>Nivel del tanque</p>
         </div>
       </div>
       <div id="alertas" style="margin-top: 1rem; color: red; font-weight: bold;"></div>
     </section>
 
-    <!-- Riego -->
+<section id="temperatura">
+  <h2>🌡️ Temperatura</h2>
+  <p>Gráfico de temperatura ambiente en tiempo real.</p>
+  <iframe 
+    width="100%" 
+    height="300" 
+    style="border:none" 
+    src="https://thingspeak.mathworks.com/channels/2993017/charts/1?bgcolor=%23d8f6d6&color=%235cc472&dynamic=true&type=line&title=Temperatura+(°C)">
+  </iframe>
+</section>
+
+	
+<section id="humedad-aire">
+  <h2>💧 Humedad del Aire</h2>
+  <p>Gráfico de humedad relativa del aire.</p>
+  <iframe 
+    width="100%" 
+    height="300" 
+    style="border:none" 
+    src="https://thingspeak.mathworks.com/channels/2993017/charts/2?bgcolor=%23d8f6d6&color=%230094c4&dynamic=true&type=line&title=Humedad+del+Aire+(%25)">
+  </iframe>
+</section>
+
+<section id="humedad-suelo">
+  <h2>🌱 Humedad del Suelo</h2>
+  <p>Gráfico de humedad del suelo.</p>
+  <iframe 
+    width="100%" 
+    height="300" 
+    style="border:none" 
+    src="https://thingspeak.mathworks.com/channels/2993017/charts/3?bgcolor=%23d8f6d6&color=%23c47300&dynamic=true&type=line&title=Humedad+del+Suelo+(%25)">
+  </iframe>
+</section>
+
+<section id="nivel-tanque">
+  <h2>🚿 Nivel del Tanque</h2>
+  <p>Gráfico del nivel de agua en el tanque.</p>
+  <iframe 
+    width="100%" 
+    height="300" 
+    style="border:none" 
+    src="https://thingspeak.mathworks.com/channels/2993017/charts/4?bgcolor=%23d8f6d6&color=%23008B8B&dynamic=true&type=line&title=Nivel+del+Tanque+(%25)">
+  </iframe>
+</section>
+
+
     <section id="riego">
       <h2>💦 Control de Riego</h2>
-      <p>Aquí puedes activar o apagar el sistema de riego manualmente.</p>
       <button onclick="activarRiego()">Activar Riego</button>
       <button onclick="apagarRiego()">Apagar Riego</button>
       <p id="riegoStatus"></p>
     </section>
 
-    <!-- Luces -->
     <section id="luces">
       <h2>💡 Control de Luces</h2>
-      <p>Controla las luces de cultivo para simular el fotoperiodo necesario.</p>
       <button onclick="encenderLuces()">Encender Luces</button>
       <button onclick="apagarLuces()">Apagar Luces</button>
       <p id="luzStatus"></p>
@@ -133,14 +173,21 @@
   <nav class="bottom-nav">
     <div onclick="mostrarSeccion('inicio')">📘<br>Inicio</div>
     <div onclick="mostrarSeccion('dashboard')">🏠<br>Panel</div>
-    <div onclick="mostrarSeccion('riego')">💧<br>Riego</div>
+    <div onclick="mostrarSeccion('temperatura')">🌡️<br>Temp</div>
+    <div onclick="mostrarSeccion('humedad-aire')">💧<br>Aire</div>
+    <div onclick="mostrarSeccion('humedad-suelo')">🌱<br>Suelo</div>
+    <div onclick="mostrarSeccion('nivel-tanque')">🚿<br>Tanque</div>
+    <div onclick="mostrarSeccion('riego')">💦<br>Riego</div>
     <div onclick="mostrarSeccion('luces')">💡<br>Luces</div>
   </nav>
+
+  <audio id="alertaAudio" src="alerta.mp3" preload="auto"></audio>
 
   <script>
     const apiKeyEscritura = "MQ7YSC1YB1ZEDEOW";
     const apiKeyLectura = "IFDLL1D2OQV7OZCD";
     const canal = "2993017";
+    let historial = [];
 
     function mostrarSeccion(id) {
       document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
@@ -156,23 +203,37 @@
           const humAir = data.field2;
           const humSoil = data.field3;
           const waterLvl = parseFloat(data.field4);
+          const riego = data.field5;
+          const luces = data.field6;
 
           document.getElementById("temp").textContent = temp.toFixed(2);
           document.getElementById("humAir").textContent = humAir;
           document.getElementById("humSoil").textContent = humSoil;
           document.getElementById("waterLvl").textContent = waterLvl;
 
-          // Alertas visuales + notificación emergente
-          let alertas = "";
+          document.getElementById("riegoStatus").textContent = riego == 1 ? "✔️ Riego Activado" : "💧 Riego Apagado";
+          document.getElementById("luzStatus").textContent = luces == 1 ? "💡 Luces Encendidas" : "🔌 Luces Apagadas";
+
+          let hayAlerta = false;
           if (waterLvl < 20) {
-            alertas += "⚠️ Bajo nivel de agua. ";
+            hayAlerta = true;
             mostrarNotificacion("Nivel de agua bajo", "El tanque tiene menos del 20 % de agua.");
+            document.getElementById("waterLvl").style.color = "red";
+          } else {
+            document.getElementById("waterLvl").style.color = "black";
           }
+
           if (temp > 28) {
-            alertas += "🔥 Temperatura elevada. ";
-            mostrarNotificacion("Temperatura alta", "El ambiente supera los 35 °C.");
+            hayAlerta = true;
+            mostrarNotificacion("Temperatura alta", "El ambiente supera los 28 °C.");
+            document.getElementById("temp").style.color = "red";
+          } else {
+            document.getElementById("temp").style.color = "black";
           }
-          document.getElementById("alertas").textContent = alertas;
+
+          if (!hayAlerta) {
+            document.getElementById("alertas").textContent = "✅ Condiciones normales.";
+          }
         })
         .catch(err => {
           console.error("Error al obtener datos:", err);
@@ -180,50 +241,39 @@
         });
     }
 
+    function mostrarNotificacion(titulo, mensaje) {
+      if (Notification.permission === "granted") {
+        new Notification(titulo, { body: mensaje });
+        document.getElementById("alertaAudio").play();
+      }
+      const entrada = `${new Date().toLocaleTimeString()} - ${titulo}: ${mensaje}`;
+      historial.push(entrada);
+      mostrarHistorial();
+    }
+
+    function mostrarHistorial() {
+      const alertasHTML = historial.slice(-5).map(a => `🔔 ${a}`).join("<br>");
+      document.getElementById("alertas").innerHTML = alertasHTML;
+    }
+
     function activarRiego() {
       fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=1`)
-        .then(() => {
-          document.getElementById("riegoStatus").textContent = "✔️ Riego Activado";
-        })
-        .catch(() => {
-          document.getElementById("riegoStatus").textContent = "❌ Error al activar riego";
-        });
+        .then(() => actualizarDatos());
     }
 
     function apagarRiego() {
       fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=0`)
-        .then(() => {
-          document.getElementById("riegoStatus").textContent = "💧 Riego Apagado";
-        })
-        .catch(() => {
-          document.getElementById("riegoStatus").textContent = "❌ Error al apagar riego";
-        });
+        .then(() => actualizarDatos());
     }
 
     function encenderLuces() {
       fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=1`)
-        .then(() => {
-          document.getElementById("luzStatus").textContent = "💡 Luces Encendidas";
-        })
-        .catch(() => {
-          document.getElementById("luzStatus").textContent = "❌ Error al encender luces";
-        });
+        .then(() => actualizarDatos());
     }
 
     function apagarLuces() {
       fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=0`)
-        .then(() => {
-          document.getElementById("luzStatus").textContent = "🔌 Luces Apagadas";
-        })
-        .catch(() => {
-          document.getElementById("luzStatus").textContent = "❌ Error al apagar luces";
-        });
-    }
-
-    function mostrarNotificacion(titulo, mensaje) {
-      if (Notification.permission === "granted") {
-        new Notification(titulo, { body: mensaje });
-      }
+        .then(() => actualizarDatos());
     }
 
     if (Notification.permission !== "granted") {
