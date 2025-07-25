@@ -184,105 +184,117 @@
   <audio id="alertaAudio" src="alerta.mp3" preload="auto"></audio>
 
   <script>
-    const apiKeyEscritura = "MQ7YSC1YB1ZEDEOW";
-    const apiKeyLectura = "IFDLL1D2OQV7OZCD";
-    const canal = "2993017";
-    let historial = [];
+  const apiKeyEscritura = "MQ7YSC1YB1ZEDEOW";
+  const apiKeyLectura = "IFDLL1D2OQV7OZCD";
+  const canal = "2993017";
+  let historial = [];
 
-    function mostrarSeccion(id) {
-      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
+  function mostrarSeccion(id) {
+    document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+  }
+
+  function actualizarDatos() {
+    const readAPI = `https://api.thingspeak.com/channels/${canal}/feeds/last.json?api_key=${apiKeyLectura}`;
+    fetch(readAPI)
+      .then(res => res.json())
+      .then(data => {
+        const temp = parseFloat(data.field1);
+        const humAir = data.field2;
+        const humSoil = data.field3;
+        const waterLvl = parseFloat(data.field4);
+        const riego = data.field5;
+        const luces = data.field6;
+
+        document.getElementById("temp").textContent = temp.toFixed(2);
+        document.getElementById("humAir").textContent = humAir;
+        document.getElementById("humSoil").textContent = humSoil;
+        document.getElementById("waterLvl").textContent = waterLvl;
+
+        document.getElementById("riegoStatus").textContent = riego == 1 ? "✔️ Riego Activado" : "💧 Riego Apagado";
+        document.getElementById("luzStatus").textContent = luces == 1 ? "💡 Luces Encendidas" : "🔌 Luces Apagadas";
+
+        let hayAlerta = false;
+        if (waterLvl < 20) {
+          hayAlerta = true;
+          mostrarNotificacion("Nivel de agua bajo", "El tanque tiene menos del 20 % de agua.");
+          document.getElementById("waterLvl").style.color = "red";
+        } else {
+          document.getElementById("waterLvl").style.color = "black";
+        }
+
+        if (temp > 28) {
+          hayAlerta = true;
+          mostrarNotificacion("Temperatura alta", "El ambiente supera los 28 °C.");
+          document.getElementById("temp").style.color = "red";
+        } else {
+          document.getElementById("temp").style.color = "black";
+        }
+
+        if (!hayAlerta) {
+          document.getElementById("alertas").textContent = "✅ Condiciones normales.";
+        }
+      })
+      .catch(err => {
+        console.error("Error al obtener datos:", err);
+        document.getElementById("alertas").textContent = "❌ Error al cargar datos";
+      });
+  }
+
+  function mostrarNotificacion(titulo, mensaje) {
+    if (Notification.permission === "granted") {
+      new Notification(titulo, { body: mensaje });
+      document.getElementById("alertaAudio").play();
     }
+    const entrada = `${new Date().toLocaleTimeString()} - ${titulo}: ${mensaje}`;
+    historial.push(entrada);
+    mostrarHistorial();
+  }
 
-    function actualizarDatos() {
-      const readAPI = `https://api.thingspeak.com/channels/${canal}/feeds/last.json?api_key=${apiKeyLectura}`;
-      fetch(readAPI)
-        .then(res => res.json())
-        .then(data => {
-          const temp = parseFloat(data.field1);
-          const humAir = data.field2;
-          const humSoil = data.field3;
-          const waterLvl = parseFloat(data.field4);
-          const riego = data.field5;
-          const luces = data.field6;
+  function mostrarHistorial() {
+    const alertasHTML = historial.slice(-5).map(a => `🔔 ${a}`).join("<br>");
+    document.getElementById("alertas").innerHTML = alertasHTML;
+  }
 
-          document.getElementById("temp").textContent = temp.toFixed(2);
-          document.getElementById("humAir").textContent = humAir;
-          document.getElementById("humSoil").textContent = humSoil;
-          document.getElementById("waterLvl").textContent = waterLvl;
+  function activarRiego() {
+    fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=1`)
+      .then(() => {
+        document.getElementById("riegoStatus").textContent = "✔️ Activando riego...";
+        setTimeout(actualizarDatos, 16000);
+      });
+  }
 
-          document.getElementById("riegoStatus").textContent = riego == 1 ? "✔️ Riego Activado" : "💧 Riego Apagado";
-          document.getElementById("luzStatus").textContent = luces == 1 ? "💡 Luces Encendidas" : "🔌 Luces Apagadas";
+  function apagarRiego() {
+    fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=0`)
+      .then(() => {
+        document.getElementById("riegoStatus").textContent = "⏳ Apagando riego...";
+        setTimeout(actualizarDatos, 16000);
+      });
+  }
 
-          let hayAlerta = false;
-          if (waterLvl < 20) {
-            hayAlerta = true;
-            mostrarNotificacion("Nivel de agua bajo", "El tanque tiene menos del 20 % de agua.");
-            document.getElementById("waterLvl").style.color = "red";
-          } else {
-            document.getElementById("waterLvl").style.color = "black";
-          }
+  function encenderLuces() {
+    fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=1`)
+      .then(() => {
+        document.getElementById("luzStatus").textContent = "💡 Encendiendo luces...";
+        setTimeout(actualizarDatos, 16000);
+      });
+  }
 
-          if (temp > 28) {
-            hayAlerta = true;
-            mostrarNotificacion("Temperatura alta", "El ambiente supera los 28 °C.");
-            document.getElementById("temp").style.color = "red";
-          } else {
-            document.getElementById("temp").style.color = "black";
-          }
+  function apagarLuces() {
+    fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=0`)
+      .then(() => {
+        document.getElementById("luzStatus").textContent = "🔌 Apagando luces...";
+        setTimeout(actualizarDatos, 16000);
+      });
+  }
 
-          if (!hayAlerta) {
-            document.getElementById("alertas").textContent = "✅ Condiciones normales.";
-          }
-        })
-        .catch(err => {
-          console.error("Error al obtener datos:", err);
-          document.getElementById("alertas").textContent = "❌ Error al cargar datos";
-        });
-    }
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
 
-    function mostrarNotificacion(titulo, mensaje) {
-      if (Notification.permission === "granted") {
-        new Notification(titulo, { body: mensaje });
-        document.getElementById("alertaAudio").play();
-      }
-      const entrada = `${new Date().toLocaleTimeString()} - ${titulo}: ${mensaje}`;
-      historial.push(entrada);
-      mostrarHistorial();
-    }
-
-    function mostrarHistorial() {
-      const alertasHTML = historial.slice(-5).map(a => `🔔 ${a}`).join("<br>");
-      document.getElementById("alertas").innerHTML = alertasHTML;
-    }
-
-    function activarRiego() {
-      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=1`)
-        .then(() => actualizarDatos());
-    }
-
-    function apagarRiego() {
-      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field5=0`)
-        .then(() => actualizarDatos());
-    }
-
-    function encenderLuces() {
-      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=1`)
-        .then(() => actualizarDatos());
-    }
-
-    function apagarLuces() {
-      fetch(`https://api.thingspeak.com/update?api_key=${apiKeyEscritura}&field6=0`)
-        .then(() => actualizarDatos());
-    }
-
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-
-    actualizarDatos();
-    setInterval(actualizarDatos, 15000);
-  </script>
+  actualizarDatos();
+  setInterval(actualizarDatos, 15000);
+</script>
 
 </body>
 </html>
