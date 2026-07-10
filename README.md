@@ -158,18 +158,6 @@ MIT License
 
 ---
 
-## 👩‍💻 Author
-
-Laura Daniela Hernandez Ramos
-
-Electronic Engineer
-
-GitHub: https://github.com/LauraDaheq
-
-LinkedIn: https://www.linkedin.com/in/laura-daniela-hernandez-ramos-891482311/
-
----
-
 ## ⭐ About
 
 This project demonstrates the integration of IoT technologies, cloud services, web development, and remote monitoring to automate greenhouse management through an intuitive dashboard.
